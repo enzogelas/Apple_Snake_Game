@@ -15,8 +15,8 @@ const backgroundColor = "#222";
 const skyColor = "#87CEEB";
 const grassColor = "#553333" 
 const victoryColor = "#9B1922";
-const snakeColor = "#063E29";
-const snakeHeadColor = "#042E23";
+const snakeColor = "#A9C712";
+const snakeHeadColor = "#131F1B";
 const appleColor = "#A8221F";
 
 const dirtTex = new Image();
@@ -31,21 +31,9 @@ appleTex.src = "textures/apple.png";
 const victoryTex = new Image();
 victoryTex.src = "textures/victory.png";
 
-const snakeTex = new Image();
-snakeTex.src = "textures/snake.png";
-
-const snakeAngleTex = new Image();
-snakeAngleTex.src = "textures/snake_angle.png"
-
-const snakeHeadTex = new Image();
-snakeHeadTex.src = "textures/snake_head.png";
-
-const snakeTailTex = new Image();
-snakeTailTex.src = "textures/snake_tail.png";
-
 // Arrays to store snake positions
-let snakeArray = [{x:2, y:0}, {x:1, y:0}, {x:0, y:0}];
-let snakeDirectionArray = [{x:1, y:0}, {x:1, y:0}];
+let snakeArray = [];
+let snakeDirectionArray = [];
 
 // Array to store the state of the game
 let gameArray;
@@ -85,9 +73,6 @@ function isEqual(p1,p2){
     return p1.x == p2.x && p1.y == p2.y;
 }
 
-// Boolean to prevent snake from moving during animation
-let canMove = true;
-
 // Determines if a move is valid
 function isValid(p){
     // Test if snake is in grid
@@ -99,7 +84,6 @@ function isValid(p){
     // Test if snake doesn't bump into itself
     for(const position of snakeArray){
         if(isEqual(position,p)){
-            //console.log("BUMP");
             return false;
         } 
     }
@@ -111,6 +95,10 @@ function isValid(p){
 // Computes the possible future direction
 function newPosition(position,direction){
     return {x: position.x + direction.x , y: position.y + direction.y};
+}
+
+function computeDirection(p1, p2){
+    return {x: p2.x-p1.x , y: p2.y-p1.y};
 }
 
 function inverseDirection(direction){
@@ -155,7 +143,6 @@ function animMovement(){
             if (count==gridSize){
                 clearInterval(intervalId);
                 manageFalling();
-                canMove = true;
             } 
         },10);
 }
@@ -170,7 +157,10 @@ function goTo(direction){
     const newHeadPosition = newPosition(headPosition, direction);
     
     if(isValid(newHeadPosition)){
-        if(gameArray[newHeadPosition.x][newHeadPosition.y] == 'V') alert("That's a victory !!");
+        if(gameArray[newHeadPosition.x][newHeadPosition.y] == 'V'){
+            alert("That's a victory !!");
+            gameArray[newHeadPosition.x][newHeadPosition.y] = 'C';
+        } 
         
         // Updating the snakeArray (positions) and the snakeDirectionArray (directions)
         snakeArray.unshift(newHeadPosition);
@@ -185,19 +175,9 @@ function goTo(direction){
         } else {
             gameArray[newHeadPosition.x][newHeadPosition.y] = 'C';
         }
-
-        // Animation of movement
-
-        //const xback = tailPosition.x;
-        //const yback = tailPosition.y;
-        //const xfront = newHeadPosition.x;
-        //const yfront = newHeadPosition.y;
-
         
         manageFalling();
         drawGame();
-
-        // HERE WE MUST HANDLE THE ANIMATIONS
 
     } else {
 
@@ -223,12 +203,19 @@ function manageFalling(){
             const p = snakeArray[s];
             snakeArray[s] = newPosition(snakeArray[s], {x:0, y:1});
         }
-        manageFalling();
+        drawGame();
+        setTimeout(() => {
+            manageFalling();
+        }, 200);
+        
     } else {
         drawGame();
     }
 }
 
+////////////////////////////////////
+// Old functions to display the snake as segments
+/*
 function directionToAngle(direction){
     if(direction.x == 1) return 0;
     else if(direction.y == 1) return 0.5*Math.PI;
@@ -260,45 +247,31 @@ function drawWithRotation(ctx, tex, gridSize, position, angle){
     // Restore the context to its original state
     ctx.restore();
 }
+*/
 
 // Draw the snake current state
 function drawSnake(){
-    // Head
+    const startX = snakeArray[0].x * gridSize + gridSize / 2;
+    const startY = snakeArray[0].y * gridSize + gridSize / 2;
+    const endX = snakeArray[snakeArray.length - 1].x * gridSize + gridSize / 2;
+    const endY = snakeArray[snakeArray.length - 1].y * gridSize + gridSize / 2;
+    const gradient = ctx.createLinearGradient(startX, startY, endX, endY);
+    gradient.addColorStop(0, snakeHeadColor);
+    gradient.addColorStop(1, snakeColor);
+
+    ctx.beginPath();
+    
     const head = snakeArray[0];
-    const headDirection = snakeDirectionArray[0];
-    drawWithRotation(ctx, snakeHeadTex, gridSize, head, directionToAngle(headDirection));
+    ctx.moveTo(head.x*gridSize + gridSize/2, head.y*gridSize + gridSize/2);
 
-    // Body
+    snakeArray.slice(1).forEach((position) => {
+        ctx.lineTo(position.x*gridSize + gridSize/2, position.y*gridSize + gridSize/2)
+    }) 
     
-    for(let i=1; i<snakeArray.length - 1; i++){
-        const position = snakeArray[i];
-        // Getting the two sides 
-        const enterSide = directionToLetter(inverseDirection(snakeDirectionArray[i]));
-        const exitSide = directionToLetter(snakeDirectionArray[i-1]); 
-        // Choosing the segment to display
-        // Lines
-        if(areEquals(enterSide, 'L', exitSide, 'R')) drawWithRotation(ctx, snakeTex, gridSize, position, 0);   
-        else if(areEquals(enterSide, 'U', exitSide, 'D')) drawWithRotation(ctx, snakeTex, gridSize, position, 0.5*Math.PI);   
-        else if(areEquals(enterSide, 'R', exitSide, 'L')) drawWithRotation(ctx, snakeTex, gridSize, position, Math.PI);   
-        else if(areEquals(enterSide, 'D', exitSide, 'U')) drawWithRotation(ctx, snakeTex, gridSize, position, 1.5*Math.PI);   
-        // Angles
-        
-        else if(areEquals(enterSide, 'L', exitSide, 'U')) drawWithRotation(ctx, snakeAngleTex, gridSize, position, 0);   
-        else if(areEquals(enterSide, 'U', exitSide, 'L')) drawWithRotation(ctx, snakeAngleTex, gridSize, position, 0);   
-        else if(areEquals(enterSide, 'U', exitSide, 'R')) drawWithRotation(ctx, snakeAngleTex, gridSize, position, 0.5*Math.PI);   
-        else if(areEquals(enterSide, 'R', exitSide, 'U')) drawWithRotation(ctx, snakeAngleTex, gridSize, position, 0.5*Math.PI);   
-        else if(areEquals(enterSide, 'R', exitSide, 'D')) drawWithRotation(ctx, snakeAngleTex, gridSize, position, Math.PI);   
-        else if(areEquals(enterSide, 'D', exitSide, 'R')) drawWithRotation(ctx, snakeAngleTex, gridSize, position, Math.PI);   
-        else if(areEquals(enterSide, 'L', exitSide, 'D')) drawWithRotation(ctx, snakeAngleTex, gridSize, position, 1.5*Math.PI);   
-        else if(areEquals(enterSide, 'D', exitSide, 'L')) drawWithRotation(ctx, snakeAngleTex, gridSize, position, 1.5*Math.PI);     
-         
-    }
-    
+    ctx.lineWidth = gridSize/2;
+    ctx.strokeStyle = gradient;
 
-    // Tail
-    const tail = snakeArray[snakeArray.length - 1];
-    const tailDirection = snakeDirectionArray[snakeDirectionArray.length - 1];
-    drawWithRotation(ctx, snakeTailTex, gridSize, tail, directionToAngle(tailDirection));
+    ctx.stroke();
 }
 
 // Draw the game current state
@@ -371,6 +344,11 @@ function getLevel(){
             for(let s=1; s<=snakeLength; s++){
                 const coordinates = lines[s].split(' ');
                 snakeArray.push({x: parseInt(coordinates[0]),y: parseInt(coordinates[1])})
+            }
+            
+            // Constructing the snake directions 
+            for(let d=0; d<snakeLength-1; d++){
+                snakeDirectionArray.push(computeDirection(snakeArray[d+1],snakeArray[d]));
             }
 
             tilesOnRow = parseInt(figures[1]);
