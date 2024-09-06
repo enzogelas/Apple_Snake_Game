@@ -32,11 +32,11 @@ app.get("/getLevelNumber", (req,res) => {
 
 app.get("/getLevel", (req,res) => {
     console.log("You ask for the level :", currentLevel);
-    const levelFile = "levels/" + currentLevel + ".lvl";
+    const levelFile = "levels/" + currentLevel + ".json";
     fs.readFile(levelFile, 'utf8', (err, data) => {
         if(err) {
             console.log("Level",currentLevel,"is not defined yet !");
-            res.end("");
+            res.end("{}");
         } else {
             res.end(data);
         }

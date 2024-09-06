@@ -41,13 +41,13 @@ let gameArray;
 // Generate a random color
 function colorOf(x) {
     switch(x){
-        case 'C':
+        case 0:
             return skyColor;
-        case 'T':
+        case 1:
             return grassColor;
-        case 'V':
+        case 3:
             return victoryColor;
-        case 'P':
+        case 2:
             return appleColor;
     }
     return backgroundColor;
@@ -56,13 +56,13 @@ function colorOf(x) {
 
 function texOf(x) {
     switch(x){
-        case 'C':
+        case 0:
             return skyTex;
-        case 'T':
+        case 1:
             return dirtTex;
-        case 'P':
+        case 2:
             return appleTex;
-        case 'V':
+        case 3:
             return victoryTex;
     }
     return null;
@@ -79,7 +79,7 @@ function isValid(p){
     if ((p.x < 0) || (p.x >= tilesOnRow) || (p.y < 0) || (p.y >= tilesOnColumn)) return false;
 
     // Test if snake is in the sky
-    if (gameArray[p.x][p.y] == 'T') return false;
+    if (gameArray[p.y][p.x] == 1) return false;
 
     // Test if snake doesn't bump into itself
     for(const position of snakeArray){
@@ -127,39 +127,15 @@ function stepMoveRight(stepNumber, x, y){
     ctx.fillRect(x*gridSize+stepNumber, y*gridSize, 1, gridSize);
 };
 
-/////////////////////////////////////////////////
-/////////////////////////////////////////////////
-// TO MODIFY : HANDLE THE ANIMATION
-/*
-function animMovement(){
-    let count=0;
-        
-        let intervalId = setInterval(()=>{
-            ctx.fillStyle = colorOf(gameArray[xback][yback]);
-            stepMove(count, xback, yback, lastDirection)
-            ctx.fillStyle = snakeColor;
-            stepMove(count, xfront, yfront, direction);
-            count++;
-            if (count==gridSize){
-                clearInterval(intervalId);
-                manageFalling();
-            } 
-        },10);
-}
-*/
-/////////////////////////////////////////////////
-/////////////////////////////////////////////////
-
-
 // Move the snake
 function goTo(direction){
     const headPosition = snakeArray[0];
     const newHeadPosition = newPosition(headPosition, direction);
     
     if(isValid(newHeadPosition)){
-        if(gameArray[newHeadPosition.x][newHeadPosition.y] == 'V'){
+        if(gameArray[newHeadPosition.y][newHeadPosition.x] == 3){
             alert("That's a victory !!");
-            gameArray[newHeadPosition.x][newHeadPosition.y] = 'C';
+            gameArray[newHeadPosition.y][newHeadPosition.x] = 0;
         } 
         
         // Updating the snakeArray (positions) and the snakeDirectionArray (directions)
@@ -169,11 +145,11 @@ function goTo(direction){
         let tailPosition ;
         let lastDirection ;       
         
-        if(gameArray[newHeadPosition.x][newHeadPosition.y] != 'P'){
+        if(gameArray[newHeadPosition.y][newHeadPosition.x] != 2){
             tailPosition = snakeArray.pop();
             lastDirection = snakeDirectionArray.pop();
         } else {
-            gameArray[newHeadPosition.x][newHeadPosition.y] = 'C';
+            gameArray[newHeadPosition.y][newHeadPosition.x] = 0;
         }
         
         manageFalling();
@@ -190,7 +166,7 @@ function goTo(direction){
 function isFalling(){
     for(const position of snakeArray){
         // Checking if the case below is solid
-        if(gameArray[position.x][position.y + 1] == 'T'){
+        if(gameArray[position.y +1][position.x] == 1){
             return false;
         }
     }
@@ -212,42 +188,6 @@ function manageFalling(){
         drawGame();
     }
 }
-
-////////////////////////////////////
-// Old functions to display the snake as segments
-/*
-function directionToAngle(direction){
-    if(direction.x == 1) return 0;
-    else if(direction.y == 1) return 0.5*Math.PI;
-    else if(direction.x == -1) return Math.PI;
-    else if(direction. y == -1) return 1.5*Math.PI;
-}
-
-function directionToLetter(direction){
-    if(direction.x == 1) return 'R';
-    else if(direction.y == 1) return 'D';
-    else if(direction.x == -1) return 'L';
-    else if(direction. y == -1) return 'U';
-}
-
-// To test if {a,b} = {c,d}
-function areEquals(a1, a2, b1, b2) {
-    return (a1 == a2 && b1 == b2);
-}
-
-function drawWithRotation(ctx, tex, gridSize, position, angle){
-    // Save the current context state
-    ctx.save();
-    // Move the canvas origin to the snake segment's position
-    ctx.translate(position.x * gridSize + gridSize / 2, position.y * gridSize + gridSize / 2);
-    // Rotate the canvas to the right angle
-    ctx.rotate(angle);
-    // Draw the image, adjusting for the canvas translation
-    ctx.drawImage(tex, -gridSize / 2, -gridSize / 2, gridSize, gridSize);
-    // Restore the context to its original state
-    ctx.restore();
-}
-*/
 
 // Draw the snake current state
 function drawSnake(){
@@ -281,7 +221,7 @@ function drawGame() {
     for (let i = 0; i < tilesOnRow; i++) {
         for (let j = 0; j < tilesOnColumn; j++) {
 
-            const tileType = gameArray[i][j];
+            const tileType = gameArray[j][i];
 
             const tex = texOf(tileType);
             if(tex != null){
@@ -325,48 +265,31 @@ function getLevel(){
 
     xhttp.onreadystatechange = function () {
         if (this.status == 200 && this.readyState == 4){
-            let data = this.responseText;
+            let data = JSON.parse(this.responseText);
 
             console.log(data);
 
-            const lines = data.split('\r\n');
-
-            if(lines.length <= 1){
+            if(data == {}){
                 alert("The level is not defined yet !");
                 return;
             }
 
-            const figures = lines[0].split(' ');
-            
-            // Constructing the snake
-            const snakeLength = parseInt(figures[0]);
-            snakeArray.length=0;
-            for(let s=1; s<=snakeLength; s++){
-                const coordinates = lines[s].split(' ');
-                snakeArray.push({x: parseInt(coordinates[0]),y: parseInt(coordinates[1])})
-            }
-            
+            snakeArray = data.snakeArray;
+
             // Constructing the snake directions 
-            for(let d=0; d<snakeLength-1; d++){
+            for(let d=0 ; d < snakeArray.length - 1 ; d++){
                 snakeDirectionArray.push(computeDirection(snakeArray[d+1],snakeArray[d]));
             }
 
-            tilesOnRow = parseInt(figures[1]);
-            tilesOnColumn = parseInt(figures[2]);
+            tilesOnRow = data.width;
+            tilesOnColumn = data.height;
 
             console.log("The width is",tilesOnRow,"and the height is", tilesOnColumn);
 
             canvas.width = tilesOnRow * gridSize;
             canvas.height = tilesOnColumn * gridSize;
 
-            gameArray = new Array(tilesOnRow);
-
-            for (let i = 0; i < tilesOnRow; i++) {
-                gameArray[i] = new Array(tilesOnColumn);
-                for (let j = 0; j < tilesOnColumn; j++) {
-                    gameArray[i][j] = lines[j+(snakeLength+1)][i]; 
-                }
-            }
+            gameArray = data.gameArray;
 
             manageFalling();
             drawGame();
